@@ -1,0 +1,129 @@
+Serverless Function Scheduler - Code Description
+FILE STRUCTURE
+
+Team_No_1.ipynb: Main simulation code with classes, algorithms, and examples
+
+MAIN CLASSES
+
+1. Request Class
+class Request: Tracks function invocation requests with: id: Unique request identifier, arrival: Arrival timestamp, func: Function ID to be executed, exec: Execution time required, start: When execution started (None if queued), finish: When execution completed, cold_start: Boolean flag for cold start, served_by_inst: Which instance served this request
+
+2. Instance Class
+class Instance: Represents compute instances with: id: Unique instance identifier, func: Function it serves, state: 'idle', 'busy', or 'cold', free_time: When instance became free, busy_until: When busy instance becomes free
+
+3. FunctionMeta Class
+class FunctionMeta: Stores metadata for each function: id: Function identifier, t_e: Average execution time, t_l: Cold start latency, t_v: Instance evacuation time, instances: List of instance IDs for this function, queue: deque of pending requests
+
+4. Simulator Class
+class Simulator: Main simulation engine with: C: Total system capacity, functions: Dictionary of FunctionMeta objects, instances: Dictionary of Instance objects, requests: Dictionary of Request objects, ev_q: Priority queue of events (arrival, finish, cold_done)
+
+CORE ALGORITHMS
+
+Function Creation Policy (FCP) - handle_arrival()
+Processes new requests: 1) Check for idle instance, use if available, 
+2) If capacity available, compute benefit (ne_j) and create instance if beneficial, 
+3) If capacity full, find idle instance from another function, compute replacement benefit (ne_j_jprime), replace if beneficial, 
+4) Otherwise queue request
+
+Function Replacement Policy (FRP) - handle_finish()
+Optimizes when instance becomes free: 
+1) Compute current function cost (w_j), 
+2) Find functions with queued requests, compute candidate costs (w_jprime), 
+3) Replace current instance with best candidate if cost lower, 
+4) Otherwise serve next request from current function queue
+
+MATHEMATICAL FUNCTIONS
+
+compute_ne_j(): Calculates benefit of creating new instance: nw_j + 1 - (t_lj * Kj) / t_ej
+
+compute_ne_j_jprime(): Calculates benefit of replacing idle instance: nw_j + 1 - ((t_lj + t_vjprime) * Kj) / t_ej
+
+compute_wj_for_frp(): Computes waiting cost for current function
+
+compute_wjprime_for_candidate(): Computes cost for serving candidate function
+
+EVENT TYPES
+
+EV_ARRIVAL: New request arrives → handled by FCP
+
+EV_FINISH: Request completes → handled by FRP
+
+EV_COLD_DONE: Cold instance ready → start serving queued requests
+
+HELPER FUNCTIONS
+
+Workload Generation
+
+synthetic_workload(): Creates synthetic requests with Poisson arrivals, Zipf function popularity, log-normal execution times
+
+build_functions_from_reqs(): Builds FunctionMeta objects from request data
+
+load_trace_csv(): Loads Azure Functions trace data from CSV
+
+Simulation Control
+
+submit_requests(): Adds requests to event queue
+
+run(): Main simulation loop processing events
+
+summarize(): Computes statistics (latency percentiles, cold starts, replacements)
+
+PERFORMANCE METRICS
+
+Response time: finish - arrival
+
+Cold start percentage: requests with cold_start=True / total requests
+
+P50, P95, P99 latency percentiles
+
+Instance replacements and evictions count
+
+KEY PARAMETERS
+
+capacity: Maximum concurrent instances (default: 16)
+
+seed: Random seed for reproducibility
+
+verbose: Print detailed simulation progress
+
+debug_frp: Log FRP decision making
+
+duration: Simulation time in seconds
+
+rate: Average requests per second
+
+num_funcs: Number of unique functions
+
+OUTPUT FILES
+
+results_esff.csv: Per-request timing data
+
+azure_trace_esff_ready_sorted.csv: Sorted Azure trace for simulation
+
+Console output: Summary statistics and latency percentiles
+
+DEPENDENCIES
+
+pandas: Data manipulation and analysis
+
+matplotlib: Plotting and visualization
+
+heapq: Priority queue for event scheduling
+
+collections: deque for request queues
+
+random, math, statistics: Core Python libraries
+
+csv, os: File I/O operations
+
+MAIN CONTRIBUTIONS
+
+Realistic serverless simulation with cold starts and capacity constraints
+
+Two-phase scheduling: FCP for new requests, FRP for optimization
+
+Support for both synthetic and real Azure workloads
+
+Comprehensive performance metrics and visualization
+
+Mathematical models for benefit/cost calculations
